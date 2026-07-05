@@ -260,6 +260,6 @@ MIT © 2026 NexusAgent AI — Built for hackathons, built for winners.
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=9d4edd,0df2c9&height=100&section=footer" width="100%"/>
 
-**Made with ⚡ by the Srija Bhattacharya**
+**Made with 🩷 by Srija Bhattacharya**
 
 </div>
