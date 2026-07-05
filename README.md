@@ -244,89 +244,6 @@ nexusagent-ai/
 ```
 
 ---
-
-## 🏆 Hackathon Winning Guide
-
-> Use this section as your complete pitch strategy. Every item below was designed to maximize judge impact.
-
-### 🎯 The 3-Minute Pitch Script
-
-**⏱️ 0:00 – 0:30 | The Hook**
-> *"Every AI productivity tool today requires API keys, cloud subscriptions, and internet access. We built NexusAgent AI — a fully offline, multi-agent platform that coordinates planning, optimization, scheduling, and security in under 3 seconds. No cloud. No keys. Just local intelligence."*
-
-**⏱️ 0:30 – 2:00 | The Live Demo**
-1. Open dashboard → type a study goal → click **Execute**
-2. Watch the **ADK Graph Visualizer**: nodes animate Orange → Green sequentially
-3. Show the compiled **Calendar Timeline** appearing below
-4. Switch to **System → Sandbox** → type `rm -rf /` → show it blocked in red
-5. Go to **Focus** → play **Ocean Waves** soundscape → explain it's synthesized in-browser
-6. Show the **10-Question Quiz** → submit and reveal green/red answers with explanations
-
-**⏱️ 2:00 – 2:40 | The Technical Depth**
-> *"The MCP server implements JSON-RPC 2.0 — the same protocol Anthropic's Claude Desktop uses. Our agents run a topological sort on task dependency graphs to detect and resolve circular dependencies. Security is enforced via Zod schema validation + a blacklist that blocks 15+ dangerous CLI patterns."*
-
-**⏱️ 2:40 – 3:00 | The Close**
-> *"Production-grade architecture. Premium UI. 100% offline. This is the future of AI-powered productivity."*
-
----
-
-### 🏅 Judging Criteria Alignment
-
-| Criterion | How NexusAgent AI Wins |
-|-----------|----------------------|
-| **Innovation** | Web Audio API synthesis for offline soundscapes is creative and technically impressive |
-| **Technical Depth** | Topological sort DAG, Zod validation, JSON-RPC 2.0, MCP standard compliance |
-| **Completeness** | Full-stack: backend agents + API + security + rich React UI — production ready |
-| **User Experience** | Icon sidebar, hero stats, animated graph, 3D flashcards, real-time quiz grading |
-| **Business Potential** | Works offline on any device, no subscription costs, privacy-first |
-| **Security** | Demonstrated live sandbox blocking exploits — judges love security demos |
-
----
-
-### 💡 Wow Factors to Emphasize
-
-```
-┌─────────────────────────────────────────────────────┐
-│  🎵 WOW #1: Offline Audio Synthesis                 │
-│  "No MP3 files downloaded. All 7 soundscapes are    │
-│   generated from oscillators and filters in the     │
-│   browser's Web Audio API in real time."            │
-├─────────────────────────────────────────────────────┤
-│  🔗 WOW #2: MCP Protocol Compliance                 │
-│  "Our server implements the same JSON-RPC 2.0       │
-│   standard Anthropic uses for Claude integrations.  │
-│   Any MCP-compatible client can connect to it."     │
-├─────────────────────────────────────────────────────┤
-│  🧮 WOW #3: Computer Science Rigor                  │
-│  "Agents use topological sort on a directed         │
-│   acyclic graph to linearize task execution.        │
-│   Circular dependencies raise explicit errors."      │
-├─────────────────────────────────────────────────────┤
-│  🛡️ WOW #4: Security-First Design                   │
-│  "The sandbox blocks rm -rf, sudo, curl, and        │
-│   15+ other patterns live, on screen, in real       │
-│   time. Shows production readiness instantly."      │
-├─────────────────────────────────────────────────────┤
-│  🔮 WOW #5: ADK Graph Visualization                 │
-│  "Real-time pipeline visualization: White = Idle,   │
-│   Orange (pulsing) = Running, Green = Completed.    │
-│   Judges see the agents working."                   │
-└─────────────────────────────────────────────────────┘
-```
-
-### 📋 Pre-Hackathon Checklist
-
-- [ ] Run `npm install && npm run build && npm start`
-- [ ] Open `http://localhost:3000` and verify all 6 tabs load
-- [ ] Test orchestration: enter a goal, click Execute, watch graph animate
-- [ ] Test sandbox: type `rm -rf /`, verify it shows BLOCKED in red
-- [ ] Test soundscapes: click Ocean Waves, verify audio plays
-- [ ] Complete the Quiz with all 10 answers, verify results show
-- [ ] Prepare a 1-sentence summary of each tech wow factor
-- [ ] Practice the 3-minute pitch at least 3 times
-
----
-
 ## 📸 Screenshots
 
 | Dashboard | Pomodoro | Quiz |
@@ -343,6 +260,6 @@ MIT © 2026 NexusAgent AI — Built for hackathons, built for winners.
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=9d4edd,0df2c9&height=100&section=footer" width="100%"/>
 
-**Made with ⚡ by the NexusAgent AI Team**
+**Made with ⚡ by the Srija Bhattacharya**
 
 </div>
