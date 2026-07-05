@@ -250,6 +250,11 @@ nexusagent-ai/
 |-----------|----------|------|
 | Hero stats + ADK graph | Synthesized soundscapes | Graded answers with explanations |
 
+
+
+<img width="1907" height="895" alt="Image" src="https://github.com/user-attachments/assets/dca83ddb-0da7-41e9-933f-226fd92e8565" />
+
+
 ---
 
 ## 📄 License
