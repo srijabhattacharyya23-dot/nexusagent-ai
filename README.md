@@ -253,7 +253,7 @@ nexusagent-ai/
 
 <img width="1907" height="897" alt="Image" src="https://github.com/user-attachments/assets/f3d00248-c607-459f-9ab2-c8cdd34e2fef" />
 <img width="1907" height="900" alt="Image" src="https://github.com/user-attachments/assets/67605f39-df4c-4eaf-9a75-816f4feba6cb" />
-<img width="1907" height="895" alt="Image" src="https://github.com/user-attachments/assets/dca83ddb-0da7-41e9-933f-226fd92e8565" />
+<img width="1907" height="859" alt="Image" src="https://github.com/user-attachments/assets/439c5e64-fbd6-45aa-832f-49f554085022" />
 
 
 ---
