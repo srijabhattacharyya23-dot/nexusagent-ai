@@ -1,10 +1,265 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   LayoutDashboard, Cpu, Settings, ShieldCheck, Terminal,
   RotateCcw, Play, AlertTriangle, CheckCircle2, Info,
   ChevronRight, Code, User, Sliders, CalendarDays, ListTodo,
   Timer, BookOpen, HelpCircle, Volume2, Bookmark, Award, Layers, Zap
 } from 'lucide-react';
+
+/* ─── EMBEDDED SERVER LOGIC (replaces Express backend) ────────── */
+
+// Sandbox: Forbidden CLI patterns
+const FORBIDDEN_PATTERNS = [
+  /rm\s+/i, /del\s+/i, /format\s+/i, /mkfs\s+/i, /sudo\s+/i, /chmod\s+/i, /chown\s+/i,
+  />\s*\/etc/i, /\|\s*bash/i, /sh\s+/i, /powershell/i, /cmd\.exe/i, /reg\s+/i, /nuke/i,
+  /\.\.\/\.\./, // prevent path traversal
+];
+
+// Sandbox: Execute command in simulated sandbox
+function executeInSandbox(rawCommand, config = {}) {
+  const timeoutMs = config.timeoutMs || 2000;
+  const memoryLimitMb = config.memoryLimitMb || 64;
+  const result = { stdout: '', stderr: '', exitCode: 0, executionTimeMs: 0, memoryUsedMb: 0, securityViolations: [], status: 'success' };
+
+  if (!rawCommand || rawCommand.length < 1) {
+    result.status = 'error'; result.exitCode = 1;
+    result.stderr = 'Input Validation Error: Command cannot be empty';
+    return result;
+  }
+
+  // Security checks
+  const violations = [];
+  for (const pattern of FORBIDDEN_PATTERNS) {
+    if (pattern.test(rawCommand)) violations.push(`Forbidden pattern matched: ${pattern.toString()}`);
+  }
+  if (violations.length > 0) {
+    result.status = 'blocked'; result.exitCode = 403;
+    result.stderr = 'SECURITY ALERT: Sandbox blocked command execution.';
+    result.securityViolations = violations;
+    return result;
+  }
+
+  const commandParts = rawCommand.trim().split(/\s+/);
+  const toolName = commandParts[0].toLowerCase();
+  const args = commandParts.slice(1);
+  result.memoryUsedMb = Math.floor(Math.random() * 15) + 12;
+
+  if (result.memoryUsedMb > memoryLimitMb) {
+    result.status = 'oom'; result.exitCode = 137;
+    result.stderr = `FATAL ERROR: Memory limit of ${memoryLimitMb}MB exceeded (Attempted to use ${result.memoryUsedMb}MB).`;
+    result.executionTimeMs = 0;
+    return result;
+  }
+
+  const mockDuration = Math.floor(Math.random() * 200) + 50;
+  if (mockDuration > timeoutMs) {
+    result.status = 'timeout'; result.exitCode = 124;
+    result.stderr = `FATAL ERROR: Execution timed out after ${timeoutMs}ms.`;
+    result.executionTimeMs = timeoutMs;
+    return result;
+  }
+  result.executionTimeMs = mockDuration;
+
+  switch (toolName) {
+    case 'echo': result.stdout = args.join(' '); break;
+    case 'agent-status':
+      result.stdout = JSON.stringify({ system: 'NexusAgent AI Orchestrator', health: 'GREEN', uptime: '3600s', activeAgents: ['Planner', 'Optimizer', 'Scheduler'], mcpStatus: 'CONNECTED' }, null, 2);
+      break;
+    case 'list-tasks':
+      result.stdout = 'ID    | Task Name                  | Assignee  | Status\n------------------------------------------------------\nT-001 | Analyze schedule conflicts | Optimizer | COMPLETED\nT-002 | Align task timeframes      | Scheduler | PENDING\nT-003 | Compile execution roadmap  | Planner   | RUNNING';
+      break;
+    case 'optimize-path':
+      result.stdout = 'Running Topological Sort Optimization...\nAnalyzing dependencies: [T-001] -> [T-002]\nSuccess: Found optimal sequence without circular dependencies.\nExecution Sequence: T-001, then T-002, then T-003.';
+      break;
+    case 'ls': case 'dir':
+      result.stdout = 'Directory: c:\\Users\\Asus\\KAGGLE\n07/05/2026  09:00 PM    <DIR>          server\n07/05/2026  09:00 PM    <DIR>          src\n07/05/2026  09:00 PM             1,024 package.json\n07/05/2026  09:00 PM               300 vite.config.js\n07/05/2026  09:00 PM               450 index.html';
+      break;
+    default:
+      result.exitCode = 127;
+      result.stderr = `Command not found or not supported in sandbox environment: '${toolName}'. Available tools: echo, agent-status, list-tasks, optimize-path, ls, dir.`;
+      result.status = 'error';
+  }
+  return result;
+}
+
+// Agent Orchestrator: Decomposes goals, optimizes, and schedules
+function runOrchestrator(objective, targetDate, priority) {
+  const runLogs = [];
+  const ts = () => new Date().toISOString().substring(11, 19);
+  try {
+    // Validate
+    if (!objective || objective.length < 3 || objective.length > 200) throw new Error('Objective must be 3-200 characters');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) throw new Error('Target date must be YYYY-MM-DD');
+    if (!['low', 'medium', 'high', 'critical'].includes(priority)) throw new Error('Invalid priority');
+
+    // Step 1: Planner Agent
+    runLogs.push(`[${ts()}] [Planner Agent] Received objective: "${objective}"`);
+    runLogs.push(`[${ts()}] [Planner Agent] Decomposing goal into executable sub-tasks...`);
+    const obj = objective.toLowerCase();
+    let tasks;
+    if (obj.includes('launch') || obj.includes('product') || obj.includes('project')) {
+      tasks = [
+        { id: 'T1', title: 'Define specifications & scope', durationMinutes: 60, dependencies: [], assignedAgent: 'Planner' },
+        { id: 'T2', title: 'Code initial prototype implementation', durationMinutes: 180, dependencies: ['T1'], assignedAgent: 'Planner' },
+        { id: 'T3', title: 'Perform local sandbox testing', durationMinutes: 90, dependencies: ['T2'], assignedAgent: 'Optimizer' },
+        { id: 'T4', title: 'Deploy release version to staging', durationMinutes: 60, dependencies: ['T3'], assignedAgent: 'Scheduler' }
+      ];
+    } else if (obj.includes('exam') || obj.includes('study') || obj.includes('learn')) {
+      tasks = [
+        { id: 'T1', title: 'Gather study syllabus & review materials', durationMinutes: 45, dependencies: [], assignedAgent: 'Planner' },
+        { id: 'T2', title: 'Read core textbook theory sections', durationMinutes: 120, dependencies: ['T1'], assignedAgent: 'Planner' },
+        { id: 'T3', title: 'Solve sample practice problems', durationMinutes: 90, dependencies: ['T2'], assignedAgent: 'Optimizer' },
+        { id: 'T4', title: 'Take comprehensive timed mock exam', durationMinutes: 150, dependencies: ['T3'], assignedAgent: 'Scheduler' }
+      ];
+    } else {
+      tasks = [
+        { id: 'T1', title: 'Research topic and gather references', durationMinutes: 60, dependencies: [], assignedAgent: 'Planner' },
+        { id: 'T2', title: 'Draft main implementation plan outline', durationMinutes: 90, dependencies: ['T1'], assignedAgent: 'Planner' },
+        { id: 'T3', title: 'Optimize resource constraints & costs', durationMinutes: 60, dependencies: ['T2'], assignedAgent: 'Optimizer' },
+        { id: 'T4', title: 'Schedule calendar slots & notify team', durationMinutes: 45, dependencies: ['T3'], assignedAgent: 'Scheduler' }
+      ];
+    }
+    runLogs.push(`[${ts()}] [Planner Agent] Successfully split goal into ${tasks.length} sub-tasks.`);
+
+    // Step 2: Task Optimization Agent (topological sort)
+    runLogs.push(`[${ts()}] [Task Optimization Agent] Analyzing dependencies for ${tasks.length} tasks...`);
+    const adjList = {}, inDegree = {}, taskMap = {};
+    tasks.forEach(t => { adjList[t.id] = []; inDegree[t.id] = 0; taskMap[t.id] = t; });
+    tasks.forEach(t => t.dependencies.forEach(depId => { if (adjList[depId]) { adjList[depId].push(t.id); inDegree[t.id]++; } }));
+    const queue = Object.keys(inDegree).filter(id => inDegree[id] === 0);
+    const orderedIds = [];
+    while (queue.length > 0) {
+      const curr = queue.shift(); orderedIds.push(curr);
+      adjList[curr].forEach(neighbor => { inDegree[neighbor]--; if (inDegree[neighbor] === 0) queue.push(neighbor); });
+    }
+    if (orderedIds.length < tasks.length) throw new Error('Circular dependency detected during task optimization.');
+    const orderedTasks = orderedIds.map(id => ({ ...taskMap[id], complexity: taskMap[id].durationMinutes > 120 ? 'High' : (taskMap[id].durationMinutes > 60 ? 'Medium' : 'Low'), executionOrder: orderedIds.indexOf(id) + 1 }));
+    runLogs.push(`[${ts()}] [Task Optimization Agent] Topological sort complete. Optimal path: ${orderedIds.join(' -> ')}`);
+
+    // Step 3: Life Scheduler Agent
+    runLogs.push(`[${ts()}] [Life Scheduler Agent] Starting scheduling for target date: ${targetDate}`);
+    runLogs.push(`[${ts()}] [Life Scheduler Agent] Analyzing user calendar for standard conflicts on date...`);
+    const lockedBlocks = [{ start: '12:00', end: '13:00', label: 'Lunch Break' }, { start: '15:00', end: '16:00', label: 'Weekly Team Synch' }];
+    lockedBlocks.forEach(b => runLogs.push(`[${ts()}] [Life Scheduler Agent] Found locked event: ${b.label} (${b.start} - ${b.end})`));
+
+    let currentHour = 9, currentMinute = 0;
+    const formatTime = (h, m) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    const addMinutes = (h, m, dur) => { let nm = m + dur; return [h + Math.floor(nm / 60), nm % 60]; };
+    const isConflicting = (sH, sM, eH, eM) => {
+      const sVal = sH * 60 + sM, eVal = eH * 60 + eM;
+      for (const block of lockedBlocks) {
+        const [bsH, bsM] = block.start.split(':').map(Number);
+        const [beH, beM] = block.end.split(':').map(Number);
+        if (sVal < beH * 60 + beM && eVal > bsH * 60 + bsM) return block;
+      }
+      return null;
+    };
+
+    const timeline = [];
+    orderedTasks.forEach(task => {
+      let [nextH, nextM] = addMinutes(currentHour, currentMinute, task.durationMinutes);
+      let conflict = isConflicting(currentHour, currentMinute, nextH, nextM);
+      while (conflict) {
+        runLogs.push(`[${ts()}] [Life Scheduler Agent] Conflict detected for "${task.title}" with "${conflict.label}". Pushing task past conflict.`);
+        const [ceH, ceM] = conflict.end.split(':').map(Number);
+        currentHour = ceH; currentMinute = ceM;
+        [nextH, nextM] = addMinutes(currentHour, currentMinute, task.durationMinutes);
+        conflict = isConflicting(currentHour, currentMinute, nextH, nextM);
+      }
+      const slotStart = formatTime(currentHour, currentMinute);
+      const slotEnd = formatTime(nextH, nextM);
+      timeline.push({ ...task, timeSlot: `${slotStart} - ${slotEnd}`, status: 'Scheduled' });
+      runLogs.push(`[${ts()}] [Life Scheduler Agent] Allocated slot for "${task.title}": ${slotStart} - ${slotEnd}`);
+      [currentHour, currentMinute] = addMinutes(nextH, nextM, 10);
+    });
+    runLogs.push(`[${ts()}] [Life Scheduler Agent] Successfully compiled final synchronized calendar.`);
+
+    return { success: true, objective, targetDate, priority, timeline, logs: runLogs };
+  } catch (error) {
+    runLogs.push(`[CRITICAL ORCHESTRATION ERROR] ${error.message}`);
+    return { success: false, error: error.message, logs: runLogs };
+  }
+}
+
+// MCP Handler: JSON-RPC 2.0 protocol handler (in-memory)
+function mcpHandler(jsonRpcRequest, dbState = {}) {
+  const { jsonrpc, id, method, params } = jsonRpcRequest;
+  if (jsonrpc !== '2.0') return { jsonrpc: '2.0', id: id || null, error: { code: -32600, message: 'Invalid Request: Must be JSON-RPC 2.0' } };
+  const ok = (result) => ({ jsonrpc: '2.0', id, result });
+  const err = (code, message, data) => ({ jsonrpc: '2.0', id, error: { code, message, data } });
+
+  try {
+    switch (method) {
+      case 'initialize': return ok({ serverInfo: { name: 'NexusAgent MCP Server', version: '1.0.0', protocolVersion: '2024-11-05' }, capabilities: { tools: { list: true, call: true }, resources: { list: true, read: true }, prompts: { list: true, get: true } } });
+      case 'tools/list': return ok({ tools: [
+        { name: 'mcp_write_log', description: 'Write a high-priority entry to the shared system logs.', inputSchema: { type: 'object', properties: { message: { type: 'string', description: 'The content of the log entry to write.' } }, required: ['message'] } },
+        { name: 'mcp_read_schedule', description: 'Read the current list of scheduled tasks for a specific date.', inputSchema: { type: 'object', properties: { date: { type: 'string', description: 'Target date in YYYY-MM-DD format.' } }, required: ['date'] } },
+        { name: 'mcp_validate_sandbox', description: 'Submit a command execution request through the security validation sandbox.', inputSchema: { type: 'object', properties: { command: { type: 'string', description: 'The command to run in the sandbox.' }, timeoutMs: { type: 'number', description: 'Enforced timeout threshold (ms).' } }, required: ['command'] } }
+      ] });
+      case 'tools/call': {
+        const { name, arguments: args } = params || {};
+        if (!name) return err(-32602, 'Invalid params: Missing tool name');
+        switch (name) {
+          case 'mcp_write_log': {
+            const msg = args?.message; if (!msg) return err(-32602, "Missing 'message' argument");
+            if (dbState.logs) dbState.logs.push(`[${new Date().toISOString().substring(11, 19)}] [MCP Write Log] ${msg}`);
+            return ok({ content: [{ type: 'text', text: `Log successfully recorded: "${msg}"` }] });
+          }
+          case 'mcp_read_schedule': {
+            const date = args?.date; if (!date) return err(-32602, "Missing 'date' argument");
+            const timeline = dbState.timeline || [];
+            return ok({ content: [{ type: 'text', text: JSON.stringify({ date, timelineCount: timeline.length, timeline }, null, 2) }] });
+          }
+          case 'mcp_validate_sandbox': {
+            const cmd = args?.command; if (!cmd) return err(-32602, "Missing 'command' argument");
+            return ok({ content: [{ type: 'text', text: JSON.stringify(executeInSandbox(cmd, { timeoutMs: args.timeoutMs }), null, 2) }] });
+          }
+          default: return err(-32601, `Method not found: Tool '${name}' does not exist.`);
+        }
+      }
+      case 'resources/list': return ok({ resources: [
+        { uri: 'schedule://current', name: 'Active Orchestrated Schedule', description: 'The timeline currently compiled by the Life Scheduler agent.', mimeType: 'application/json' },
+        { uri: 'system://logs', name: 'NexusAgent Execution Logs', description: 'Live console logging for all multi-agent operations.', mimeType: 'text/plain' }
+      ] });
+      case 'resources/read': {
+        const { uri } = params || {}; if (!uri) return err(-32602, 'Invalid params: Missing resource URI');
+        switch (uri) {
+          case 'schedule://current': return ok({ contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(dbState.timeline || [], null, 2) }] });
+          case 'system://logs': return ok({ contents: [{ uri, mimeType: 'text/plain', text: (dbState.logs || []).join('\n') }] });
+          default: return err(-32602, `Resource not found: ${uri}`);
+        }
+      }
+      case 'prompts/list': return ok({ prompts: [{ name: 'optimize-schedule-prompt', description: 'A pre-configured instructions template for optimizing overloaded calendars.', arguments: [{ name: 'slotsCount', description: 'Number of overlapping tasks to resolve.', required: true }] }] });
+      case 'prompts/get': {
+        const { name: promptName, arguments: promptArgs } = params || {}; if (!promptName) return err(-32602, 'Invalid params: Missing prompt name');
+        if (promptName === 'optimize-schedule-prompt') return ok({ description: 'Optimize schedule template instructions', messages: [{ role: 'user', content: { type: 'text', text: `You are an expert scheduler. There are ${promptArgs?.slotsCount || '3'} overlapping slots on the calendar. Provide recommendations on how to merge, delegate, or defer these tasks prioritizing high-importance objectives first.` } }] });
+        return err(-32602, `Prompt not found: ${promptName}`);
+      }
+      default: return err(-32601, `Method not found: '${method}'`);
+    }
+  } catch (error) { return err(-32603, `Internal JSON-RPC Error: ${error.message}`); }
+}
+
+// Default initial state (matches what server.js provided)
+function createDefaultState() {
+  const ts = new Date().toISOString().substring(11, 19);
+  return {
+    objective: 'Launch product beta sprint',
+    targetDate: new Date().toISOString().substring(0, 10),
+    priority: 'high',
+    timeline: [
+      { id: 'T1', title: 'Define specifications & scope', durationMinutes: 60, dependencies: [], assignedAgent: 'Planner', complexity: 'Low', executionOrder: 1, timeSlot: '09:00 - 10:00', status: 'Scheduled' },
+      { id: 'T2', title: 'Code initial prototype implementation', durationMinutes: 180, dependencies: ['T1'], assignedAgent: 'Planner', complexity: 'High', executionOrder: 2, timeSlot: '10:10 - 13:10', status: 'Scheduled' },
+      { id: 'T3', title: 'Perform local sandbox testing', durationMinutes: 90, dependencies: ['T2'], assignedAgent: 'Optimizer', complexity: 'Medium', executionOrder: 3, timeSlot: '13:20 - 14:50', status: 'Scheduled' },
+      { id: 'T4', title: 'Deploy release version to staging', durationMinutes: 60, dependencies: ['T3'], assignedAgent: 'Scheduler', complexity: 'Low', executionOrder: 4, timeSlot: '16:00 - 17:00', status: 'Scheduled' }
+    ],
+    logs: [
+      `[${ts}] [System] NexusAgent AI Bootstrapped successfully.`,
+      `[${ts}] [Planner Agent] Pre-loaded default objective details.`,
+      `[${ts}] [Life Scheduler Agent] Synced 2 conflict calendar slots.`
+    ]
+  };
+}
 
 /* ─── DATA ─────────────────────────────────────────────────── */
 const FLASHCARDS = [
@@ -43,14 +298,14 @@ const SOUNDSCAPES = [
 export default function App() {
   const [activeTab, setActiveTab]     = useState('dashboard');
   const [sysTab, setSysTab]           = useState('agents'); // agents | mcp | sandbox | logs
-  const [state, setState]             = useState({ objective: '', targetDate: '', priority: 'medium', timeline: [], logs: [] });
+  const [state, setState]             = useState(() => createDefaultState());
   const [loading, setLoading]         = useState(false);
   const [error, setError]             = useState(null);
 
   // Goal form
-  const [goalObjective, setGoalObjective] = useState('');
-  const [goalDate, setGoalDate]           = useState('');
-  const [goalPriority, setGoalPriority]   = useState('medium');
+  const [goalObjective, setGoalObjective] = useState('Launch product beta sprint');
+  const [goalDate, setGoalDate]           = useState(new Date().toISOString().substring(0, 10));
+  const [goalPriority, setGoalPriority]   = useState('high');
 
   // Sandbox
   const [sandboxCmd, setSandboxCmd]       = useState('');
@@ -95,19 +350,13 @@ export default function App() {
 
   const logsEndRef = useRef(null);
 
-  /* ── API Helpers ─────────────────────────────────────── */
-  const fetchState = async () => {
-    try {
-      const data = await fetch('/api/state').then(r => r.json());
-      setState(data);
-      setGoalObjective(data.objective);
-      setGoalDate(data.targetDate);
-      setGoalPriority(data.priority);
-      setError(null);
-    } catch { setError("Cannot connect to NexusAgent orchestrator."); }
-  };
+  /* ── State Helpers (all in-memory, no backend needed) ── */
+  const refreshState = useCallback(() => {
+    // State is already in-memory — no fetch needed
+    setError(null);
+  }, []);
 
-  useEffect(() => { fetchState(); }, []);
+  useEffect(() => { refreshState(); }, [refreshState]);
   useEffect(() => { if (logsEndRef.current) logsEndRef.current.scrollIntoView({ behavior: 'smooth' }); }, [state.logs]);
 
   /* ── Pomodoro ────────────────────────────────────────── */
@@ -233,35 +482,52 @@ export default function App() {
     setTimeout(() => set({ scheduler: 'completed', end: 'running' }), 2250);
     setTimeout(() => set({ end: 'completed' }), 2650);
     try {
-      const res = await fetch('/api/orchestrate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ objective: goalObjective, targetDate: goalDate, priority: goalPriority }) });
-      const data = await res.json();
-      if (res.ok) { setTimeout(async () => { await fetchState(); setLoading(false); }, 2700); }
-      else { setError(data.error || "Orchestration failed."); setLoading(false); }
-    } catch { setError("Connection failure during orchestration."); setLoading(false); }
+      const timestamp = new Date().toISOString().substring(11, 19);
+      const result = runOrchestrator(goalObjective, goalDate, goalPriority);
+      if (result.success) {
+        setTimeout(() => {
+          setState(prev => ({
+            ...prev,
+            objective: result.objective,
+            targetDate: result.targetDate,
+            priority: result.priority,
+            timeline: result.timeline,
+            logs: [...prev.logs, `[${timestamp}] [System] Orchestrating Multi-Agent flow for objective: "${goalObjective}"`, ...result.logs]
+          }));
+          setLoading(false);
+        }, 2700);
+      } else {
+        setState(prev => ({ ...prev, logs: [...prev.logs, `[${timestamp}] [System] Orchestrating Multi-Agent flow for objective: "${goalObjective}"`, ...result.logs] }));
+        setError(result.error || 'Orchestration failed.'); setLoading(false);
+      }
+    } catch { setError('Orchestration engine error.'); setLoading(false); }
   };
 
   /* ── Sandbox ─────────────────────────────────────────── */
-  const handleRunSandbox = async (e) => {
+  const handleRunSandbox = (e) => {
     e.preventDefault(); if (!sandboxCmd.trim()) return;
-    try {
-      const res = await fetch('/api/sandbox/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command: sandboxCmd, timeoutMs: sandboxTimeout, memoryLimitMb: sandboxMemory }) });
-      setSandboxOutput(await res.json()); setSandboxCmd(''); await fetchState();
-    } catch (err) { console.error(err); }
+    const result = executeInSandbox(sandboxCmd, { timeoutMs: sandboxTimeout, memoryLimitMb: sandboxMemory });
+    const timestamp = new Date().toISOString().substring(11, 19);
+    setState(prev => ({ ...prev, logs: [...prev.logs, `[${timestamp}] [Sandbox] Executed CLI: "${sandboxCmd}" | Exit Code: ${result.exitCode} | Status: ${result.status}`] }));
+    setSandboxOutput(result); setSandboxCmd('');
   };
 
-  const handleMcpSubmit = async () => {
+  const handleMcpSubmit = () => {
     try {
-      const res = await fetch('/api/mcp', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: mcpRequest });
-      setMcpResponse(await res.json()); await fetchState();
-    } catch (err) { setMcpResponse({ jsonrpc: "2.0", id: null, error: { code: -32700, message: `Parse Error: ${err.message}` } }); }
+      const parsed = JSON.parse(mcpRequest);
+      const response = mcpHandler(parsed, state);
+      setMcpResponse(response);
+    } catch (err) { setMcpResponse({ jsonrpc: '2.0', id: null, error: { code: -32700, message: `Parse Error: ${err.message}` } }); }
   };
 
-  const handleReset = async () => {
-    try {
-      await fetch('/api/reset', { method: 'POST' }); await fetchState();
-      setGraphStates({ start: 'completed', planner: 'completed', optimizer: 'completed', examStudy: 'completed', scheduler: 'completed', end: 'completed' });
-      setSandboxOutput(null); setSandboxCmd(''); setError(null);
-    } catch {}
+  const handleReset = () => {
+    const fresh = createDefaultState();
+    setState(fresh);
+    setGoalObjective(fresh.objective);
+    setGoalDate(fresh.targetDate);
+    setGoalPriority(fresh.priority);
+    setGraphStates({ start: 'completed', planner: 'completed', optimizer: 'completed', examStudy: 'completed', scheduler: 'completed', end: 'completed' });
+    setSandboxOutput(null); setSandboxCmd(''); setError(null);
   };
 
   /* ── Todo ────────────────────────────────────────────── */
@@ -363,7 +629,7 @@ export default function App() {
                 <p>Synchronized ADK multi-agent orchestration — 100% offline, zero API keys.</p>
               </div>
               <div className="actions-row">
-                <button className="btn btn-secondary" onClick={fetchState}><RotateCcw size={14} /> Refresh</button>
+                <button className="btn btn-secondary" onClick={refreshState}><RotateCcw size={14} /> Refresh</button>
               </div>
             </div>
 
