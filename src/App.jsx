@@ -315,23 +315,33 @@ export default function App() {
 
       {/* ── SIDEBAR ───────────────────────────────────── */}
       <aside className="sidebar">
-        <div className="logo-section">⚡</div>
+        {/* Brand */}
+        <div className="sidebar-brand">
+          <div className="brand-icon">⚡</div>
+          <div className="brand-text">
+            <span className="brand-name">NexusAgent</span>
+            <span className="brand-sub">AI Platform</span>
+          </div>
+        </div>
+
+        <div className="sidebar-divider" />
 
         <nav className="nav-links">
           {NAV.map(n => (
             <button key={n.id} className={`nav-link ${activeTab === n.id ? 'active' : ''}`} onClick={() => setActiveTab(n.id)}>
-              {n.icon}
-              {n.label}
+              <span className="nav-icon">{n.icon}</span>
+              <span className="nav-label">{n.label}</span>
             </button>
           ))}
         </nav>
 
         <div className="sidebar-footer">
-          <div className="mcp-status-badge">
+          <div className="offline-badge">
             <span className="status-dot" />
+            <span className="offline-text">100% Offline</span>
           </div>
-          <button className="btn btn-secondary btn-icon" onClick={handleReset} title="Reset Systems">
-            <RotateCcw size={16} />
+          <button className="btn btn-secondary btn-icon" onClick={handleReset} title="Reset all agents">
+            <RotateCcw size={15} />
           </button>
         </div>
       </aside>
